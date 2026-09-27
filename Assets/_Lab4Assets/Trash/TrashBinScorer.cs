@@ -3,7 +3,9 @@ using UnityEngine;
 
 public class TrashBinScorer : MonoBehaviour
 {
-    [Header("Setup")]
+                 
+    public int requiredScore = 5;      
+        [Header("Setup")]
     public Transform rimCenter;     // point at the center/top of the bin opening
     [Tooltip("This object should have a Trigger collider (e.g., tall cylinder above bin).")]
     public Collider scoreZone;      // auto-filled by Reset if on same object
@@ -16,6 +18,9 @@ public class TrashBinScorer : MonoBehaviour
 
     [Header("State")]
     public int score;
+    [Header("Feedback")]
+    public TMPro.TextMeshProUGUI scoreText;   
+    public AudioSource scoreSound;            
     public bool IsComplete { get; private set; }  // <-- new property
 
     private HashSet<TrashItemThrowData> counted = new();
@@ -45,6 +50,14 @@ public class TrashBinScorer : MonoBehaviour
             score++;
             counted.Add(data);
             Debug.Log($"Trash: SCORE #{score} (speed {speed:F1}, dist {dist:F2}, t {since:F1}s)");
+            if (scoreText != null)
+            {
+                scoreText.text = "Score: " + score;
+            }
+            if (scoreSound != null)
+            {
+                scoreSound.Play();
+            }
         }
         else
         {
