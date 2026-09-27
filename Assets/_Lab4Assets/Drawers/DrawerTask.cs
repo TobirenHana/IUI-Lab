@@ -1,10 +1,11 @@
 using UnityEngine;
+using TMPro;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactors;
 
 // You can change this file
 public class DrawerTask : MonoBehaviour
-{ 
+{
     [Header(" DO NOT CHANGE ANY PARAMETERS HERE ")]
     [Header("Setup")]
     public string taskName = "Drawers";
@@ -12,12 +13,27 @@ public class DrawerTask : MonoBehaviour
     public XRSocketInteractor[] sockets; // drag from inspector
     public int requiredCount = 4; // should normally be equal to sockets.Length
 
+    [Header("Insertion feedback")]
+    [SerializeField] private Color correctColor = Color.yellow;
+    [SerializeField] private Color incorrectColor = Color.red;
+    [SerializeField] private float feedbackDuration = 1f;
+
+    [Header("Progress feedback")]
+    [SerializeField] private TMP_Text progressText;
+    [SerializeField] private string progressLabel = "Drawer";
+
+    [Header("Audio feedback")]
+    [SerializeField] private AudioSource feedbackAudioSource;
+    [SerializeField] private AudioClip correctInsertClip;
+    [SerializeField] private AudioClip incorrectInsertClip;
+
     [Header("Metrics (persist across resets)")]
     [SerializeField] private int totalInserts;   // every time something is placed in any socket
     [SerializeField] private int wrongInserts;   // placed item != expectedType
     public float ErrorRate => totalInserts > 0 ? (float)wrongInserts / totalInserts : 0f; //note: not used in final version
 
     public bool IsComplete { get; private set; }
+    public int MatchedCount { get; private set; }
 
     // DO NOT CHANGE THIS METHOD
     void OnEnable()
@@ -42,7 +58,7 @@ public class DrawerTask : MonoBehaviour
             s.selectExited.RemoveListener(OnSocketExited);
         }
     }
-    
+
     //called when something entered a socket
     void OnSocketEntered(SelectEnterEventArgs args)
     {
@@ -51,14 +67,58 @@ public class DrawerTask : MonoBehaviour
 
         // we get the the selected item and check whether its what we expected
         var selected = args.interactableObject?.transform;
+        var file = selected ? selected.GetComponent<FileItem>() : null;
+        bool isCorrect = file && file.fileType == expectedType;
+
+        if (!isCorrect)
+            wrongInserts++;
+
+        AudioClip feedbackClip = isCorrect ? correctInsertClip : incorrectInsertClip;
+        if (feedbackAudioSource && feedbackClip)
+            feedbackAudioSource.PlayOneShot(feedbackClip);
+
         if (selected)
-        {
-            var fi = selected.GetComponent<FileItem>();
-            if (!fi || fi.fileType != expectedType)
-                wrongInserts++;
-        }
+            StartCoroutine(ShowInsertionFeedback(selected.gameObject, isCorrect));
 
         Recompute();
+    }
+
+    private System.Collections.IEnumerator ShowInsertionFeedback(
+        GameObject fileObject,
+        bool isCorrect)
+    {
+        var renderer = fileObject.GetComponentInChildren<Renderer>();
+
+        if (!renderer)
+        {
+            Debug.LogWarning("No Renderer found on inserted file.");
+            yield break;
+        }
+
+        Color feedbackColor = isCorrect ? correctColor : incorrectColor;
+        Material material = renderer.material;
+        bool usesBaseColor = material.HasProperty("_BaseColor");
+        Color originalColor = usesBaseColor
+            ? material.GetColor("_BaseColor")
+            : material.color;
+        float flashInterval = feedbackDuration / 6f;
+
+        for (int flash = 0; flash < 3; flash++)
+        {
+            if (usesBaseColor)
+                material.SetColor("_BaseColor", feedbackColor);
+            else
+                material.color = feedbackColor;
+
+            yield return new WaitForSeconds(flashInterval);
+
+            if (usesBaseColor)
+                material.SetColor("_BaseColor", originalColor);
+            else
+                material.color = originalColor;
+
+            yield return new WaitForSeconds(flashInterval);
+        }
     }
 
     // called when something exited a socket
@@ -71,7 +131,7 @@ public class DrawerTask : MonoBehaviour
 
         // for each socket, check if we currently have a correct item in it
         foreach (var s in sockets)
-        {   
+        {
             // always check whether the socket is initialized
             if (s == null) continue;
             var selected = s.firstInteractableSelected;
@@ -84,6 +144,10 @@ public class DrawerTask : MonoBehaviour
         }
 
         bool nowComplete = matched >= requiredCount;
+        MatchedCount = matched;
+
+        if (progressText)
+            progressText.text = $"{progressLabel}: {matched}/{requiredCount}";
 
         // If the task was not yet complete, print message
         if (nowComplete && !IsComplete)

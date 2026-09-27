@@ -1,4 +1,5 @@
 using UnityEngine;
+using TMPro;
 using UnityEngine.XR.Interaction.Toolkit.Interactables; // XRGrabInteractable
 
 public class CoffeeTask : MonoBehaviour
@@ -18,12 +19,21 @@ public class CoffeeTask : MonoBehaviour
     public float rayDistance = 0.35f;     // stream length
 
     [Header("Angles")]
-    public float angleOnDeg = 25;        // start pouring when <= this to DOWN
-    public float angleOffDeg = 45;       // keep pouring when <= this
+    public float angleOnDeg = 40;        // start pouring when <= this to DOWN
+    public float angleOffDeg = 55;       // keep pouring when <= this
 
     [Header("Completion")]
     public float requiredSeconds = 0.3f;    // time hitting cup to complete
     public bool IsComplete { get; private set; }
+
+    [Header("Progress feedback")]
+    [SerializeField] private TMP_Text progressText;
+    [SerializeField] private string progressLabel = "Coffee";
+
+    [Header("Audio feedback")]
+    [SerializeField] private AudioSource feedbackAudioSource;
+    [SerializeField] private AudioClip pourStartClip;
+    [SerializeField] private AudioClip completionClip;
 
     // State
     float pouringSeconds;
@@ -47,7 +57,7 @@ public class CoffeeTask : MonoBehaviour
         if (targetPour != pouring)
         {
             pouring = targetPour;
-            SetParticles(pouring); 
+            SetParticles(pouring);
         }
 
         // Count time only while pouring AND ray hits the cup mouth
@@ -58,6 +68,8 @@ public class CoffeeTask : MonoBehaviour
             {
                 IsComplete = true;
                 SetParticles(false);
+                if (feedbackAudioSource && completionClip)
+                    feedbackAudioSource.PlayOneShot(completionClip);
                 Debug.Log("Coffee task COMPLETE");
             }
         }
@@ -65,6 +77,16 @@ public class CoffeeTask : MonoBehaviour
         {
             pouringSeconds = 0f;
         }
+
+        UpdateProgressText();
+    }
+
+    void UpdateProgressText()
+    {
+        if (!progressText) return;
+
+        float progress = Mathf.Clamp01(pouringSeconds / Mathf.Max(requiredSeconds, 0.001f));
+        progressText.text = $"{progress:P0}";
     }
 
     // Coffee Task reset
@@ -92,7 +114,7 @@ public class CoffeeTask : MonoBehaviour
 
         // 5) Zero physics
         ZeroBody(mokaPot ? mokaPot.GetComponent<Rigidbody>() : null);
-        ZeroBody(cup     ? cup.GetComponent<Rigidbody>()     : null);
+        ZeroBody(cup ? cup.GetComponent<Rigidbody>() : null);
 
         Debug.Log("Coffee task RESET");
     }
@@ -116,8 +138,13 @@ public class CoffeeTask : MonoBehaviour
     void SetParticles(bool play)
     {
         if (!pourParticles) return;
-        if (play && !pourParticles.isPlaying) pourParticles.Play(true);
-        if (!play && pourParticles.isPlaying)  pourParticles.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+        if (play && !pourParticles.isPlaying)
+        {
+            pourParticles.Play(true);
+            if (feedbackAudioSource && pourStartClip)
+                feedbackAudioSource.PlayOneShot(pourStartClip);
+        }
+        if (!play && pourParticles.isPlaying) pourParticles.Stop(true, ParticleSystemStopBehavior.StopEmitting);
     }
 
     // force the release of the coffee cup
