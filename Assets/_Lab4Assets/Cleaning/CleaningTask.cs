@@ -1,4 +1,5 @@
 using UnityEngine;
+using TMPro;
 
 /**
 This class handles the logic of the cleaning task
@@ -7,7 +8,6 @@ You can make changes in this file
 */
 public class CleaningTask : MonoBehaviour
 {   
-    [Header("You can change this file, just not these pre-set parameters")]
     [Header("Drag colliders here")]
     public Collider[] targets;       // Drag grid colliders manually
 
@@ -18,14 +18,16 @@ public class CleaningTask : MonoBehaviour
     public bool cleaningTask;        // True when all zones touched
     public bool IsComplete { get { return cleaningTask; } }
 
+    [Header("UI Feedback")]
+    [SerializeField] private TMP_Text progressText; // 进度文本槽位
+
     // Internal fields
     private bool[] touched;
-    private int touchedCount;
+    private int touchedCount = 0;
 
     // DO NOT CHANGE THIS METHOD
     void Start()
     {
-
         // initialize array keeping track of progress
         int n = (targets != null) ? targets.Length : 0;
         touched = new bool[n];
@@ -33,6 +35,17 @@ public class CleaningTask : MonoBehaviour
 
         // no zones means already complete
         cleaningTask = (n == 0); 
+
+        UpdateProgressUI();
+    }
+
+    void UpdateProgressUI()
+    {
+        if (progressText != null && targets != null && targets.Length > 0)
+        {
+            int percentage = Mathf.RoundToInt(((float)touchedCount / targets.Length) * 100f);
+            progressText.text = $"Cleaning: {percentage}%";
+        }
     }
 
     // This method is called when a trigger collider is touched
@@ -51,8 +64,14 @@ public class CleaningTask : MonoBehaviour
             {
                 touched[i] = true;
                 touchedCount++;
-                GetComponent<AudioSource>().Play();
-                Debug.Log("Touched a cleaning spot");
+
+                UpdateProgressUI();
+
+                if (GetComponent<AudioSource>() != null)
+                {
+                    GetComponent<AudioSource>().Play(); // 播放音效
+                }
+                Debug.Log($"Touched cleaning spot. Progress: {touchedCount}/{targets.Length}");
 
                 if (touchedCount == targets.Length)
                 {
@@ -63,5 +82,4 @@ public class CleaningTask : MonoBehaviour
             }
         }
     }
-
 }

@@ -74,3 +74,4 @@ crashlytics-build.properties
 # Ignore OldAssets
 OldAssets/
 'VR_build_BurstDebugInformation_DoNotShip/' 
+**/.DS_Store
