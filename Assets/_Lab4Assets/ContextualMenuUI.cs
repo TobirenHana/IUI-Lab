@@ -71,17 +71,17 @@ public class ContextualMenuUI : MonoBehaviour
         return
             "<b><size=90%>A Terrible Day in the Office</size></b>\n\n" +
             "Complete these 4 tasks:\n" +
-            "• Drawers - file 8 files\n" +
-            "• Trash - bin both items\n" +
-            "• Coffee - fill the cup\n" +
-            "• Cleaning - clean 5 spots\n\n" +
+            "- Drawers - file 8 files\n" +
+            "- Trash - bin both items\n" +
+            "- Coffee - fill the cup\n" +
+            "- Cleaning - clean 5 spots\n\n" +
             "<b>Press Start when ready.</b>";
     }
 
     string BuildProgressText()
     {
         //both drawers must be complete for Drawers to show as DONE
-        
+
         bool drawersDone =
             progressTracker.drawerA != null &&
             progressTracker.drawerB != null &&

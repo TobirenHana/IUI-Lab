@@ -1,11 +1,12 @@
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 
 public class TrashBinScorer : MonoBehaviour
 {
-                 
-    public int requiredScore = 5;      
-        [Header("Setup")]
+
+    public int requiredScore = 2;
+    [Header("Setup")]
     public Transform rimCenter;     // point at the center/top of the bin opening
     [Tooltip("This object should have a Trigger collider (e.g., tall cylinder above bin).")]
     public Collider scoreZone;      // auto-filled by Reset if on same object
@@ -19,9 +20,9 @@ public class TrashBinScorer : MonoBehaviour
     [Header("State")]
     public int score;
     [Header("Feedback")]
-    public TMPro.TextMeshProUGUI scoreText;   
-    public AudioSource scoreSound;            
-    public bool IsComplete { get; private set; }  // <-- new property
+    public TMPro.TextMeshProUGUI scoreText;
+    public AudioSource scoreSound;
+    public bool IsComplete { get; private set; }
 
     private HashSet<TrashItemThrowData> counted = new();
 
@@ -30,7 +31,7 @@ public class TrashBinScorer : MonoBehaviour
 
     // called when something enters the scorecollider
     void OnTriggerEnter(Collider other)
-    {   
+    {
         Debug.Log("Something entered the bin");
         // check what the other rigidbody is
         var rb = other.attachedRigidbody;
@@ -38,7 +39,7 @@ public class TrashBinScorer : MonoBehaviour
 
         var data = rb.GetComponent<TrashItemThrowData>();
         if (!data || counted.Contains(data)) return;
-        
+
         float since = Time.time - data.releaseTime;
         float speed = data.releaseVel.magnitude;
         var center = rimCenter ? rimCenter.position : transform.position;
@@ -50,10 +51,7 @@ public class TrashBinScorer : MonoBehaviour
             score++;
             counted.Add(data);
             Debug.Log($"Trash: SCORE #{score} (speed {speed:F1}, dist {dist:F2}, t {since:F1}s)");
-            if (scoreText != null)
-            {
-                scoreText.text = "Score: " + score;
-            }
+            UpdateScoreLabel();
             if (scoreSound != null)
             {
                 scoreSound.Play();
@@ -71,7 +69,14 @@ public class TrashBinScorer : MonoBehaviour
     // DO NOT CHANGE
     private void UpdateCompletion()
     {
-        // True only if at least 2 valid scores AND nothing removed (still 2+ inside)
-        IsComplete = score >= 2 && counted.Count > 1;
+        IsComplete = score >= requiredScore && counted.Count >= requiredScore;
+    }
+
+    private void UpdateScoreLabel()
+    {
+        string text = $"Trash: {score}/{requiredScore}";
+
+        if (scoreText != null)
+            scoreText.text = text;
     }
 }
