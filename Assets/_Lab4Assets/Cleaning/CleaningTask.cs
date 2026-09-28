@@ -51,6 +51,7 @@ public class CleaningTask : MonoBehaviour
             {
                 touched[i] = true;
                 touchedCount++;
+                GetComponent<AudioSource>().Play();
                 Debug.Log("Touched a cleaning spot");
 
                 if (touchedCount == targets.Length)
